@@ -21,7 +21,7 @@ def main(args):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    ts = time.time()
+    ts = time.strftime("%Y-%m-%d %H-%M-%S",time.localtime())
 
     dataset = MNIST(
         root='data', train=True, transform=transforms.ToTensor(),
@@ -40,6 +40,7 @@ def main(args):
         encoder_layer_sizes=args.encoder_layer_sizes,
         latent_size=args.latent_size,
         decoder_layer_sizes=args.decoder_layer_sizes,
+        device=device,
         conditional=args.conditional,
         num_labels=10 if args.conditional else 0).to(device)
 
@@ -79,10 +80,10 @@ def main(args):
                     epoch, args.epochs, iteration, len(data_loader)-1, loss.item()))
 
                 if args.conditional:
-                    c = torch.arange(0, 10).long().unsqueeze(1)
-                    x = vae.inference(n=c.size(0), c=c)
+                    c = torch.arange(0, 10).long().unsqueeze(1).cpu()
+                    x = vae.inference(n=c.size(0), c=c).cpu()
                 else:
-                    x = vae.inference(n=10)
+                    x = vae.inference(n=10).cpu()
 
                 plt.figure()
                 plt.figure(figsize=(5, 10))

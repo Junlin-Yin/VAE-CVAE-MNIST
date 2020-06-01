@@ -7,10 +7,11 @@ from utils import idx2onehot
 class VAE(nn.Module):
 
     def __init__(self, encoder_layer_sizes, latent_size, decoder_layer_sizes,
-                 conditional=False, num_labels=0):
+                 device, conditional=False, num_labels=0):
 
         super().__init__()
 
+        self.device = device
         if conditional:
             assert num_labels > 0
 
@@ -21,9 +22,9 @@ class VAE(nn.Module):
         self.latent_size = latent_size
 
         self.encoder = Encoder(
-            encoder_layer_sizes, latent_size, conditional, num_labels)
+            encoder_layer_sizes, latent_size, device, conditional, num_labels)
         self.decoder = Decoder(
-            decoder_layer_sizes, latent_size, conditional, num_labels)
+            decoder_layer_sizes, latent_size, device, conditional, num_labels)
 
     def forward(self, x, c=None):
 
@@ -35,7 +36,7 @@ class VAE(nn.Module):
         means, log_var = self.encoder(x, c)
 
         std = torch.exp(0.5 * log_var)
-        eps = torch.randn([batch_size, self.latent_size])
+        eps = torch.randn([batch_size, self.latent_size]).to(self.device)
         z = eps * std + means
 
         recon_x = self.decoder(z, c)
@@ -45,7 +46,7 @@ class VAE(nn.Module):
     def inference(self, n=1, c=None):
 
         batch_size = n
-        z = torch.randn([batch_size, self.latent_size])
+        z = torch.randn([batch_size, self.latent_size]).to(self.device)
 
         recon_x = self.decoder(z, c)
 
@@ -54,10 +55,11 @@ class VAE(nn.Module):
 
 class Encoder(nn.Module):
 
-    def __init__(self, layer_sizes, latent_size, conditional, num_labels):
+    def __init__(self, layer_sizes, latent_size, device, conditional, num_labels):
 
         super().__init__()
 
+        self.device = device
         self.conditional = conditional
         if self.conditional:
             layer_sizes[0] += num_labels
@@ -75,7 +77,7 @@ class Encoder(nn.Module):
     def forward(self, x, c=None):
 
         if self.conditional:
-            c = idx2onehot(c, n=10)
+            c = idx2onehot(c.cpu(), n=10).to(self.device)
             x = torch.cat((x, c), dim=-1)
 
         x = self.MLP(x)
@@ -88,10 +90,11 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
 
-    def __init__(self, layer_sizes, latent_size, conditional, num_labels):
+    def __init__(self, layer_sizes, latent_size, device, conditional, num_labels):
 
         super().__init__()
 
+        self.device = device
         self.MLP = nn.Sequential()
 
         self.conditional = conditional
@@ -111,7 +114,7 @@ class Decoder(nn.Module):
     def forward(self, z, c):
 
         if self.conditional:
-            c = idx2onehot(c, n=10)
+            c = idx2onehot(c.cpu(), n=10).to(self.device)
             z = torch.cat((z, c), dim=-1)
 
         x = self.MLP(z)
