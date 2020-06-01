@@ -30,8 +30,9 @@ def main(args):
         dataset=dataset, batch_size=args.batch_size, shuffle=True)
 
     def loss_fn(recon_x, x, mean, log_var):
-        BCE = torch.nn.functional.binary_cross_entropy(
-            recon_x.view(-1, 28*28), x.view(-1, 28*28), reduction='sum')
+        # BCE = torch.nn.functional.binary_cross_entropy(
+        #     recon_x.view(-1, 28*28), x.view(-1, 28*28), reduction='sum')
+        BCE = torch.sum((recon_x.view(-1, 28*28) - x.view(-1, 28*28)).pow(2))
         KLD = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp())
 
         return (BCE + KLD) / x.size(0)
@@ -77,7 +78,7 @@ def main(args):
 
             if iteration % args.print_every == 0 or iteration == len(data_loader)-1:
                 print("Epoch {:02d}/{:02d} Batch {:04d}/{:d}, Loss {:9.4f}".format(
-                    epoch, args.epochs, iteration, len(data_loader)-1, loss.item()))
+                    epoch+1, args.epochs, iteration, len(data_loader)-1, loss.item()))
 
                 if args.conditional:
                     c = torch.arange(0, 10).long().unsqueeze(1).cpu()
